@@ -86,7 +86,7 @@ public class Milieu extends FragmentActivity implements
 
     @Override
     public void onLocationChanged(Location location) {
-        (new GetAddressTask(this)).execute(location);
+        (new GetAddressTask(this,this)).execute(location);
         if (behavior != null && behavior.getBehavior().equals("evaluation")) {
             if (evalService != null) {
                 if (evalService.locationUpdate(location)) {

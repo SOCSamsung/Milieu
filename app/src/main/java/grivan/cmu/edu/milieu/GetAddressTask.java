@@ -22,11 +22,12 @@ import java.util.Locale;
 public class GetAddressTask extends AsyncTask<Location, Void, String> {
     Context mContext;
 
-    GetAddressCallback callback;
+    GetAddressCallback callback = null;
 
-    public GetAddressTask(Context context) {
+    public GetAddressTask(Context context, GetAddressCallback cb) {
         super();
         mContext = context;
+        callback = cb;
     }
     /**
      * Get a Geocoder instance, get the latitude and longitude
