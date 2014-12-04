@@ -1,20 +1,25 @@
 package grivan.cmu.edu.milieu;
 
 import android.location.Location;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.os.StrictMode;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationListener;
 
 import grivan.cmu.edu.milieu.dto.Behavior;
-import grivan.cmu.edu.milieu.dto.Recommendation;
 import grivan.cmu.edu.milieu.dto.StreetRegistration;
 import grivan.cmu.edu.milieu.rest.RestHelper;
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.client.Response;
 
 public class Milieu extends FragmentActivity implements
         GoogleApiClient.ConnectionCallbacks,
@@ -35,6 +40,10 @@ public class Milieu extends FragmentActivity implements
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        //allow network on main thread
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_milieu);
         mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -87,10 +96,11 @@ public class Milieu extends FragmentActivity implements
     @Override
     public void onLocationChanged(Location location) {
         (new GetAddressTask(this,this)).execute(location);
-        if (behavior != null && behavior.getBehavior().equals("evaluation")) {
+        if (behavior != null && behavior.getBehavior().equals("evaluate")) {
             if (evalService != null) {
-                if (evalService.locationUpdate(location)) {
+                if (evalService.locationUpdate(location, currentStreet)) {
                     evalService = null;
+                    behavior = null;
                 }
             }
             else {
@@ -99,8 +109,7 @@ public class Milieu extends FragmentActivity implements
         }
         if (behavior != null && behavior.getBehavior().equals("sample")) {
             if (samplService != null) {
-                Recommendation reco = samplService.locationUpdate(location, currentStreet);
-                Log.i(TAG,reco.toString());
+                samplService.locationUpdate(location, currentStreet);
             }
             else {
                 samplService = new SamplingService(behavior);
@@ -110,11 +119,29 @@ public class Milieu extends FragmentActivity implements
 
     @Override
     public void receiveAddress(String street) {
+        if (street == null || street.equals("")) {
+            Toast.makeText(this,"Address Not found!",2);
+        }
+
         if (behavior == null) {
+            TextView tv = (TextView) findViewById(R.id.textView);
+            tv.setText(street);
             currentStreet = street;
             StreetRegistration sr = new StreetRegistration();
             sr.setStreetName(street);
-            behavior = RestHelper.register(sr);
+            RestHelper.register(sr, new Callback<Behavior>() {
+                @Override
+                public void success(Behavior behav, Response response) {
+                    TextView tv = (TextView) findViewById(R.id.textView2);
+                    tv.setText(behav.getBehavior());
+                    behavior = behav;
+                }
+
+                @Override
+                public void failure(RetrofitError retrofitError) {
+                    Log.i(TAG,"Failed to retrieve behaviour");
+                }
+            });
         }
         else {
             if (!currentStreet.equals(street)) {

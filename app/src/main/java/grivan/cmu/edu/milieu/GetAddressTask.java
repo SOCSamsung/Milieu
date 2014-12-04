@@ -92,9 +92,9 @@ public class GetAddressTask extends AsyncTask<Location, Void, String> {
                     // The country of the address
                     address.getCountryName());
             // Return the text
-            return addressText;
+            return address.getThoroughfare();
         } else {
-            return "No address found";
+            return null;
         }
     }
 }
